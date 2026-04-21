@@ -1,6 +1,7 @@
 <?php
 include("admin/inc/config.php");
 session_start();
+$base_url = BASE_URL;
 
 // Restore session from cookie if user_id is not set
 if (!isset($_SESSION['user_id']) && isset($_COOKIE['user_id'])) {
@@ -71,6 +72,11 @@ function renderProductGrid($con, $query, $cart_items, $base_url, $ribbon = '')
     $p_color    = htmlspecialchars($row['color']);
     $p_weight   = htmlspecialchars($row['p_weight']);
     $p_unit     = htmlspecialchars($row['p_unit']);
+    $p_gst_per  = (float) $row['p_gst'];
+    $p_gst_amt  = round(($p_price * $p_gst_per / 100), 2);
+    $p_actual_price = $p_price + $p_gst_amt;
+    $p_actual_old_price = $p_old_price + round(($p_old_price * $p_gst_per / 100), 2);
+
     $p_sku      = htmlspecialchars($row['p_sku']);
     $stock_qty  = (int) $row['in_stoke'];
 
@@ -97,9 +103,9 @@ function renderProductGrid($con, $query, $cart_items, $base_url, $ribbon = '')
             <span class="text-muted">1311 reviews</span>
           </div>
           <div class="fw-bold fs-5">
-            ₹<?= number_format($p_price, 2); ?>
+            ₹<?= number_format($p_actual_price, 2); ?>
             <span class="text-muted text-decoration-line-through fs-6">
-              ₹<?= number_format($p_old_price, 2); ?>
+              ₹<?= number_format($p_actual_old_price, 2); ?>
             </span>
           </div>
 
@@ -107,6 +113,7 @@ function renderProductGrid($con, $query, $cart_items, $base_url, $ribbon = '')
             data-id="<?= $p_id; ?>"
             data-name="<?= $p_name; ?>"
             data-price="<?= $p_price; ?>"
+            data-gst="<?= $p_gst_amt; ?>"
             data-photo="<?= $p_photo; ?>"
             data-color="<?= $p_color; ?>"
             data-weight="<?= $p_weight; ?>"
@@ -588,8 +595,9 @@ function renderProductGrid($con, $query, $cart_items, $base_url, $ribbon = '')
            pr.p_current_price, pr.p_old_price, pr.p_sku, pr.color, pr.photo,
            pr.in_stoke, pr.p_qty, pr.p_weight
     FROM tbl_product p
-    JOIN (SELECT * FROM tbl_product_price GROUP BY p_id) pr ON p.p_id = pr.p_id
+    JOIN tbl_product_price pr ON p.p_id = pr.p_id
     WHERE p.p_is_active = 1 AND pr.in_stoke > 0
+    GROUP BY p.p_id
     ORDER BY p.p_id DESC
     LIMIT 8
 ";
@@ -706,8 +714,9 @@ function renderProductGrid($con, $query, $cart_items, $base_url, $ribbon = '')
            pr.p_current_price, pr.p_old_price, pr.p_sku, pr.color, pr.photo,
            pr.in_stoke, pr.p_qty, pr.p_weight
     FROM tbl_product p
-    JOIN (SELECT * FROM tbl_product_price GROUP BY p_id) pr ON p.p_id = pr.p_id
+    JOIN tbl_product_price pr ON p.p_id = pr.p_id
     WHERE p.p_is_active = 1 AND p.p_is_trending = 1 AND pr.in_stoke > 0
+    GROUP BY p.p_id
     ORDER BY p.p_id DESC
     LIMIT 8
 ";
